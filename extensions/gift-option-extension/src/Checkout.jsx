@@ -105,7 +105,7 @@ function Extension() {
 
     // チェックを外した場合にネコポスが選択可能かチェック
     if (isUncheckingRef.current && hasNekoposOption(deliveryGroups)) {
-      console.log("GiftOptionExtension: Showing Nekopos Banner - ネコポス便が選択可能");
+      console.log("GiftOptionExtension: Showing Nekopos Banner - ネコポスが選択可能");
       setBannerType('nekopos');
       isUserInteractingRef.current = false;
       isUncheckingRef.current = false;
@@ -183,7 +183,7 @@ function Extension() {
     <BlockStack spacing="base">
       <BlockStack spacing="tight">
         <Checkbox checked={isChecked} onChange={handleChange}>
-          ギフト梱包をする(+250円)
+          ラッピングを希望する(+250円)
         </Checkbox>
         <Text size="small" appearance="subdued">
           ※すべてまとめてラッピングいたします。ラッピングの色は指定できません
@@ -197,7 +197,7 @@ function Extension() {
         </Banner>
       )}
       {bannerType === 'nekopos' && (
-        <Banner status="info" title="ネコポス便が選択できるようになりました">
+        <Banner status="info" title="ネコポスが選択できるようになりました">
         </Banner>
       )}
     </BlockStack>
