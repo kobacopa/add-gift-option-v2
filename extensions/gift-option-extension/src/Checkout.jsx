@@ -25,7 +25,8 @@ function Extension() {
   const deliveryGroups = useDeliveryGroups();
 
   const [isChecked, setIsChecked] = useState(false);
-  const [showBanner, setShowBanner] = useState(false);
+  // バナーの種類: 'none' | 'changed' | 'nekopos'
+  const [bannerType, setBannerType] = useState('none');
 
   // deliveryGroupsの最新値を保持するRef（クロージャ問題回避用）
   const deliveryGroupsRef = useRef(deliveryGroups);
@@ -40,6 +41,22 @@ function Extension() {
   const isUserInteractingRef = useRef(false);
   const baselineTitleRef = useRef(null);
   const watchTimeoutRef = useRef(null);
+  // チェックを外したかどうかを追跡
+  const isUncheckingRef = useRef(false);
+
+  // ネコポスが選択可能かどうかをチェックするヘルパー関数
+  const hasNekoposOption = (groups) => {
+    if (!groups || groups.length === 0) return false;
+    for (const group of groups) {
+      if (!group || !group.deliveryOptions) continue;
+      for (const option of group.deliveryOptions) {
+        if (option.title && option.title.includes('ネコポス')) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
 
   // deliveryGroupsから配送方法名を取得するヘルパー関数
   // すべてのグループをチェックし、最初に有効なタイトルを返す
@@ -76,7 +93,8 @@ function Extension() {
     console.log("GiftOptionExtension: useEffect checking", {
       baseline: baselineTitleRef.current,
       current: currentTitle,
-      isInteracting: isUserInteractingRef.current
+      isInteracting: isUserInteractingRef.current,
+      isUnchecking: isUncheckingRef.current
     });
 
     // currentTitleがnullの場合はまだ更新中なので待機（フラグはリセットしない）
@@ -85,12 +103,26 @@ function Extension() {
       return;
     }
 
+    // チェックを外した場合にネコポスが選択可能かチェック
+    if (isUncheckingRef.current && hasNekoposOption(deliveryGroups)) {
+      console.log("GiftOptionExtension: Showing Nekopos Banner - ネコポス便が選択可能");
+      setBannerType('nekopos');
+      isUserInteractingRef.current = false;
+      isUncheckingRef.current = false;
+      if (watchTimeoutRef.current) {
+        clearTimeout(watchTimeoutRef.current);
+        watchTimeoutRef.current = null;
+      }
+      return;
+    }
+
     // ベースラインと比較 - 変更があった場合のみバナー表示しリセット
     if (baselineTitleRef.current !== null && baselineTitleRef.current !== currentTitle) {
       console.log("GiftOptionExtension: Showing Banner - title changed from", baselineTitleRef.current, "to", currentTitle);
-      setShowBanner(true);
+      setBannerType('changed');
       // 変更を検出したのでフラグをリセット
       isUserInteractingRef.current = false;
+      isUncheckingRef.current = false;
       if (watchTimeoutRef.current) {
         clearTimeout(watchTimeoutRef.current);
         watchTimeoutRef.current = null;
@@ -115,7 +147,9 @@ function Extension() {
     isUserInteractingRef.current = true;
 
     // バナーは操作のたびにリセット
-    setShowBanner(false);
+    setBannerType('none');
+    // チェックを外す操作かどうかを記録
+    isUncheckingRef.current = !newChecked;
     setIsChecked(newChecked);
 
     if (newChecked) {
@@ -141,6 +175,7 @@ function Extension() {
     watchTimeoutRef.current = setTimeout(() => {
       console.log("GiftOptionExtension: Watch timeout - ending observation");
       isUserInteractingRef.current = false;
+      isUncheckingRef.current = false;
     }, 3000);
   };
 
@@ -157,8 +192,12 @@ function Extension() {
           ※ネコポスで配送の場合、ラッピング対応できかねますのでご了承ください。
         </Text>
       </BlockStack>
-      {showBanner && (
+      {bannerType === 'changed' && (
         <Banner status="info" title="配送方法が変更されました">
+        </Banner>
+      )}
+      {bannerType === 'nekopos' && (
+        <Banner status="info" title="ネコポス便が選択できるようになりました">
         </Banner>
       )}
     </BlockStack>
